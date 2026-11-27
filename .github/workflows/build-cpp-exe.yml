@@ -32,12 +32,12 @@ jobs:
           $url = "https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe"
           Invoke-WebRequest -Uri $url -OutFile opencv.exe
           7z x opencv.exe -oC:\ -y | Out-Null
-          echo "OpenCV_DIR=C:\opencv\build" >> $env:GITHUB_ENV
+          echo "OpenCV_DIR=C:\opencv\build\x64\vc16\lib" >> $env:GITHUB_ENV
 
       - name: Configure CMake (Ninja Release)
         shell: pwsh
         run: |
-          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" -DOpenCV_DIR="C:\opencv\build"
+          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" -DOpenCV_DIR="C:\opencv\build\x64\vc16\lib"
 
       - name: Build VisionMaster_CPP.exe
         shell: pwsh
@@ -49,7 +49,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path release_pkg | Out-Null
           Copy-Item "build\VisionMaster_CPP.exe" -Destination "release_pkg\"
-          Get-ChildItem -Path "C:\opencv\build\x64" -Filter "opencv_world4100.dll" -Recurse | Copy-Item -Destination "release_pkg\"
+          Copy-Item "C:\opencv\build\x64\vc16\bin\opencv_world4100.dll" -Destination "release_pkg\"
           if (Test-Path "test_images") {
             Copy-Item "test_images" -Destination "release_pkg\test_images" -Recurse
           }
