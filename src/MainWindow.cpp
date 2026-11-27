@@ -57,10 +57,10 @@ void VmLogoWidget::paintEvent(QPaintEvent*) {
     p.setBrush(QBrush(grad));
     p.drawPath(path);
 
-    p.setPen(QColor("#F8FAFC"));
+    p.setPen(QColor("#E6EDF5"));
     p.setFont(QFont("Segoe UI", 11, QFont::Bold));
     p.drawText(QRectF(36, 1, 102, 17), Qt::AlignVCenter | Qt::AlignLeft, "vision");
-    p.setPen(QColor("#9CA3AF"));
+    p.setPen(QColor("#8FA0B3"));
     p.setFont(QFont("Segoe UI", 9, QFont::DemiBold));
     p.drawText(QRectF(37, 16, 102, 16), Qt::AlignVCenter | Qt::AlignLeft, "master C++");
 }
@@ -69,7 +69,7 @@ void VmLogoWidget::paintEvent(QPaintEvent*) {
 CategoryRailButton::CategoryRailButton(ToolCategory cat, QWidget* parent)
     : QPushButton(QString(), parent), m_cat(cat), m_accent(categoryColorHex(cat)) {
     setCheckable(true);
-    setFixedSize(42, 46);
+    setFixedSize(184, 42);
     setToolTip(categoryToChinese(cat) + "（点击展开悬浮算子抽屉）");
     setCursor(Qt::PointingHandCursor);
 }
@@ -77,30 +77,27 @@ CategoryRailButton::CategoryRailButton(ToolCategory cat, QWidget* parent)
 void CategoryRailButton::paintEvent(QPaintEvent*) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    bool checked = isChecked();
-    bool hovered = underMouse();
-    QRectF r(3, 3, width() - 6, height() - 6);
+    const bool checked = isChecked();
+    const bool hovered = underMouse();
+    QRectF r(1, 1, width() - 2, height() - 2);
     if (checked) {
-        QColor bg = m_accent; bg.setAlpha(42);
-        p.setPen(QPen(m_accent, 1.3));
-        p.setBrush(QBrush(bg));
-        p.drawRoundedRect(r, 7, 7);
+        p.setPen(QPen(QColor("#BFDBFE"), 1));
+        p.setBrush(QColor("#EFF6FF"));
+        p.drawRoundedRect(r, 9, 9);
         p.setPen(Qt::NoPen);
-        p.setBrush(QBrush(m_accent));
-        p.drawRoundedRect(QRectF(0, 10, 3, height() - 20), 1.5, 1.5);
+        p.setBrush(QColor("#2563EB"));
+        p.drawRoundedRect(QRectF(1, 8, 4, height() - 16), 2, 2);
     } else if (hovered) {
-        p.setPen(QPen(QColor(255, 255, 255, 36), 1.0));
-        p.setBrush(QBrush(QColor(255, 255, 255, 18)));
-        p.drawRoundedRect(r, 7, 7);
+        p.setPen(QPen(QColor("#E2E8F0"), 1));
+        p.setBrush(QColor("#F8FAFC"));
+        p.drawRoundedRect(r, 9, 9);
     }
-
-    p.setPen((checked || hovered) ? m_accent : QColor("#CBD5E1"));
+    p.setPen(checked ? QColor("#1D4ED8") : QColor("#64748B"));
     p.setFont(QFont("Consolas", 9, QFont::Bold));
-    p.drawText(QRectF(0, 4, width(), 22), Qt::AlignCenter, categoryIconText(m_cat));
-
-    p.setPen(checked ? QColor("#FFFFFF") : QColor("#9CA3AF"));
-    p.setFont(QFont("Microsoft YaHei", 7, checked ? QFont::Bold : QFont::Normal));
-    p.drawText(QRectF(0, 26, width(), 16), Qt::AlignCenter, categoryShortName(m_cat));
+    p.drawText(QRectF(14, 2, 42, height()-4), Qt::AlignVCenter | Qt::AlignLeft, categoryIconText(m_cat));
+    p.setPen(checked ? QColor("#1E40AF") : QColor("#334155"));
+    p.setFont(QFont("Microsoft YaHei", 10, checked ? QFont::Bold : QFont::DemiBold));
+    p.drawText(QRectF(62, 2, width()-72, height()-4), Qt::AlignVCenter | Qt::AlignLeft, categoryToChinese(m_cat));
 }
 
 // ==================== GlassOperatorDrawer ====================
@@ -509,8 +506,9 @@ void FreeAddressPlcEditor::updatePreview() {
 
 // ==================== MainWindow ====================
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    setWindowTitle("Vision Studio — 工业视觉流程与高精度模板匹配");
-    resize(1520, 910);
+    setWindowTitle("Vision Studio — 工业视觉工作站");
+    resize(1760, 1040);
+    setMinimumSize(1360, 820);
     setStyleSheet(buildGlassStyleSheet(false));
 
     m_engine = new ContinuousFlowEngine(&m_plc, &m_camCtrl, this);
@@ -554,59 +552,44 @@ void MainWindow::closeEvent(QCloseEvent* e) {
 }
 
 QString MainWindow::buildGlassStyleSheet(bool cyberBlue) const {
-    const QString accent = cyberBlue ? "#0EA5E9" : "#2563EB";
-    const QString accentHover = cyberBlue ? "#0284C7" : "#1D4ED8";
-    const QString base = cyberBlue ? "#EAF3FA" : "#F3F6FB";
-    return QString(R"(
-QMainWindow, QWidget {
-    background-color: %1;
-    color: #172B4D;
-    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-    font-size: 13px;
-}
-QFrame#TopTitleBar { background:#FFFFFF; border-bottom:1px solid #DCE4EF; }
-QFrame#ActionRibbon { background:#F8FAFC; border-bottom:1px solid #DCE4EF; }
-QFrame#CategoryRail { background:#FFFFFF; border-right:1px solid #DCE4EF; }
-QFrame#GlassPanel, QFrame#GlassSubCard, QFrame#FlowSubHeader {
-    background:#FFFFFF; border:1px solid #DCE4EF; border-radius:10px;
-}
-QFrame#BottomStatusBar { background:#FFFFFF; border-top:1px solid #DCE4EF; }
-QLabel#SectionTitle { color:#1E40AF; font-size:13px; font-weight:800; }
-QLabel#Breadcrumb { color:#64748B; font-size:12px; padding:2px 8px; }
-QPushButton {
-    background:#FFFFFF; color:#334155; border:1px solid #CBD5E1;
-    border-radius:7px; padding:6px 12px; font-weight:600; min-height:22px;
-}
-QPushButton:hover { background:#EFF6FF; border-color:%3; color:%4; }
-QPushButton:pressed { background:#DBEAFE; }
-QPushButton[accent="primary"] { background:%3; color:white; border:1px solid %3; }
-QPushButton[accent="success"] { background:#059669; color:white; border:1px solid #059669; }
-QPushButton[accent="danger"] { background:#DC2626; color:white; border:1px solid #DC2626; }
-QPushButton[accent="tool"] { background:transparent; border:1px solid transparent; color:#475569; }
-QPushButton[accent="tool"]:hover { background:#EFF6FF; border-color:#BFDBFE; color:%4; }
-QPushButton[accent="tool"]:checked { background:#DBEAFE; border:1px solid #93C5FD; color:#1D4ED8; }
-QPushButton[accent="menu"] { background:transparent; border:0; color:#475569; padding:6px 12px; }
-QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-    background:#FFFFFF; color:#172B4D; border:1px solid #CBD5E1;
-    border-radius:6px; padding:5px 8px; min-height:22px;
-}
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus { border:1px solid %3; }
-QComboBox QAbstractItemView { background:#FFFFFF; color:#172B4D; border:1px solid #CBD5E1; selection-background-color:#DBEAFE; }
-QTableWidget, QListWidget, QTextEdit {
-    background:#FFFFFF; color:#172B4D; border:1px solid #DCE4EF;
-    border-radius:7px; alternate-background-color:#F8FAFC; gridline-color:#E2E8F0;
-}
-QHeaderView::section { background:#F1F5F9; color:#475569; border:0; border-bottom:1px solid #DCE4EF; padding:7px; font-weight:700; }
-QTabWidget::pane { border:1px solid #DCE4EF; background:#FFFFFF; border-radius:8px; }
-QTabBar::tab { background:#F1F5F9; color:#64748B; border:0; padding:8px 16px; margin-right:3px; }
-QTabBar::tab:selected { background:#FFFFFF; color:%4; border-bottom:2px solid %3; font-weight:800; }
-QMenu { background:#FFFFFF; border:1px solid #DCE4EF; color:#172B4D; padding:5px; }
-QMenu::item { padding:7px 18px; border-radius:4px; }
-QMenu::item:selected { background:#DBEAFE; color:#1D4ED8; }
-QSplitter::handle { background:#E2E8F0; }
-QSplitter::handle:hover { background:%3; }
-QFrame#TemplateLaunchCard { background:#F8FAFC; border:1px solid #CBD5E1; border-radius:10px; }
-)").arg(base, "#FFFFFF", accent, accentHover);
+    Q_UNUSED(cyberBlue);
+    return QString::fromUtf8(R"(
+QMainWindow, QWidget { background-color:#171B22; color:#D7DEE8; font-family:"Microsoft YaHei","Segoe UI",sans-serif; font-size:12px; }
+QFrame#TopTitleBar { background:#10141B; border-bottom:1px solid #303845; }
+QFrame#ActionRibbon { background:#171D26; border-bottom:1px solid #303845; }
+QFrame#CategoryRail { background:#12171F; border-right:1px solid #303845; }
+QFrame#GlassPanel, QFrame#GlassSubCard, QFrame#FlowSubHeader { background:#1B222C; border:1px solid #303B49; border-radius:3px; }
+QFrame#BottomStatusBar { background:#10151C; border-top:1px solid #303845; }
+QLabel#SectionTitle { color:#54D6A0; font-size:13px; font-weight:800; }
+QLabel#Breadcrumb { color:#8290A2; font-size:11px; padding:2px 8px; }
+QPushButton { background:#252E3A; color:#DCE4EE; border:1px solid #3A4655; border-radius:3px; padding:5px 10px; font-weight:600; min-height:21px; }
+QPushButton:hover { background:#303D4C; border-color:#42B883; color:#FFFFFF; }
+QPushButton:pressed { background:#1C6B50; }
+QPushButton[accent="primary"] { background:#21865F; color:white; border:1px solid #2BA875; }
+QPushButton[accent="success"] { background:#18875B; color:white; border:1px solid #22A06B; }
+QPushButton[accent="danger"] { background:#A83C43; color:white; border:1px solid #C84B54; }
+QPushButton[accent="tool"] { background:transparent; border:1px solid transparent; color:#AAB6C5; }
+QPushButton[accent="tool"]:hover { background:#263543; border-color:#3E8F72; color:#62D6A4; }
+QPushButton[accent="tool"]:checked { background:#1E493B; border:1px solid #2F8D68; color:#75E0B2; }
+QPushButton[accent="menu"] { background:transparent; border:0; color:#B9C3D0; padding:6px 11px; }
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox { background:#111820; color:#E0E7EF; border:1px solid #3A4655; border-radius:3px; padding:5px 8px; min-height:21px; selection-background-color:#246B50; }
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus { border:1px solid #35A878; }
+QComboBox QAbstractItemView { background:#1B222C; color:#E0E7EF; border:1px solid #3A4655; selection-background-color:#245C47; }
+QTableWidget, QListWidget, QTextEdit { background:#111820; color:#D5DEE8; border:1px solid #303B49; border-radius:2px; alternate-background-color:#19212B; gridline-color:#2B3542; }
+QHeaderView::section { background:#202A36; color:#AFC0D0; border:0; border-bottom:1px solid #3A4655; padding:7px; font-weight:700; }
+QTabWidget::pane { border:1px solid #303B49; background:#171E27; }
+QTabBar::tab { background:#202833; color:#8998A9; border:0; padding:8px 15px; margin-right:1px; }
+QTabBar::tab:selected { background:#263542; color:#61D4A1; border-bottom:2px solid #38B77F; font-weight:800; }
+QMenu { background:#1B222C; border:1px solid #3A4655; color:#DCE4EE; padding:5px; }
+QMenu::item { padding:7px 18px; border-radius:2px; }
+QMenu::item:selected { background:#254B3D; color:#78E0B4; }
+QSplitter::handle { background:#303B49; }
+QSplitter::handle:hover { background:#37A978; }
+QFrame#TemplateLaunchCard { background:#202A35; border:1px solid #3A4655; border-radius:3px; }
+QFrame#OperatorGroup { background:#1A222C; border:1px solid #303B49; border-radius:3px; }
+QScrollArea { border:0; background:transparent; }
+QToolTip { background:#202A35; color:#E6EDF5; border:1px solid #4A5B6D; }
+)");
 }
 
 void MainWindow::buildUi() {
@@ -615,31 +598,34 @@ void MainWindow::buildUi() {
     auto* root = new QVBoxLayout(central);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
-
     root->addWidget(buildTopTitleBar());
     root->addWidget(buildActionRibbon());
 
     auto* body = new QHBoxLayout();
-    body->setContentsMargins(0, 0, 0, 0);
-    body->setSpacing(0);
-
+    body->setContentsMargins(5, 5, 5, 5);
+    body->setSpacing(5);
     m_catRail = buildCategoryRail();
     body->addWidget(m_catRail);
 
+    // VisionMaster-style workbench: flow editor on the left, image/result stack on the right.
     m_mainSplitter = new QSplitter(Qt::Horizontal);
-    m_mainSplitter->setContentsMargins(6, 6, 6, 6);
-
+    m_mainSplitter->setChildrenCollapsible(false);
+    m_mainSplitter->setHandleWidth(5);
     m_flowPanel = buildFlowPanel();
+    m_flowPanel->setMinimumWidth(390);
     m_rightSplitter = qobject_cast<QSplitter*>(buildRightWorkspace());
-    m_prodSidePanel = buildProdSidePanel();
-    m_prodSidePanel->hide();
-
+    m_rightSplitter->setOrientation(Qt::Vertical);
+    m_rightSplitter->setChildrenCollapsible(false);
+    m_rightSplitter->setHandleWidth(5);
     m_mainSplitter->addWidget(m_flowPanel);
     m_mainSplitter->addWidget(m_rightSplitter);
-    m_mainSplitter->addWidget(m_prodSidePanel);
-    m_mainSplitter->setSizes({640, 810, 0});
-
+    m_mainSplitter->setSizes({610, 900});
     body->addWidget(m_mainSplitter, 1);
+
+    m_prodSidePanel = buildProdSidePanel();
+    m_prodSidePanel->setMinimumWidth(300);
+    m_prodSidePanel->hide();
+    body->addWidget(m_prodSidePanel);
     root->addLayout(body, 1);
     root->addWidget(buildBottomStatusBar());
 }
@@ -647,7 +633,7 @@ void MainWindow::buildUi() {
 QWidget* MainWindow::buildTopTitleBar() {
     auto* bar = new QFrame();
     bar->setObjectName("TopTitleBar");
-    bar->setFixedHeight(40);
+    bar->setFixedHeight(52);
     auto* hl = new QHBoxLayout(bar);
     hl->setContentsMargins(10, 2, 12, 2);
     hl->setSpacing(6);
@@ -712,7 +698,7 @@ QWidget* MainWindow::buildTopTitleBar() {
 QWidget* MainWindow::buildActionRibbon() {
     auto* rib = new QFrame();
     rib->setObjectName("ActionRibbon");
-    rib->setFixedHeight(42);
+    rib->setFixedHeight(50);
     auto* hl = new QHBoxLayout(rib);
     hl->setContentsMargins(10, 4, 12, 4);
     hl->setSpacing(6);
@@ -771,25 +757,85 @@ QWidget* MainWindow::buildActionRibbon() {
 }
 
 QWidget* MainWindow::buildCategoryRail() {
+    // Persistent operator library: no floating drawer; every operator is visible and one click adds it.
     auto* rail = new QFrame();
     rail->setObjectName("CategoryRail");
-    rail->setFixedWidth(48);
-    auto* vl = new QVBoxLayout(rail);
-    vl->setContentsMargins(3, 8, 3, 8);
-    vl->setSpacing(5);
+    rail->setMinimumWidth(205);
+    rail->setMaximumWidth(235);
+    auto* outer = new QVBoxLayout(rail);
+    outer->setContentsMargins(12, 14, 12, 12);
+    outer->setSpacing(8);
 
-    ToolCategory cats[] = {
+    auto* title = new QLabel("算子库");
+    title->setStyleSheet("font-size:18px;font-weight:800;color:#E5EDF5;padding:2px 4px;");
+    auto* subtitle = new QLabel("VISION OPERATORS  /  点击添加");
+    subtitle->setStyleSheet("font-size:9px;font-weight:700;letter-spacing:1px;color:#7F91A5;padding:0 4px 6px;");
+    outer->addWidget(title);
+    outer->addWidget(subtitle);
+
+    auto* search = new QLineEdit();
+    search->setPlaceholderText("搜索算子名称...");
+    search->setClearButtonEnabled(true);
+    outer->addWidget(search);
+
+    auto* scroll = new QScrollArea();
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    auto* host = new QWidget();
+    auto* layout = new QVBoxLayout(host);
+    layout->setContentsMargins(0, 0, 4, 0);
+    layout->setSpacing(10);
+
+    const ToolCategory cats[] = {
         ToolCategory::Acquisition, ToolCategory::Preprocess, ToolCategory::Location,
         ToolCategory::Measurement, ToolCategory::Recognition, ToolCategory::Calibration,
         ToolCategory::Logic, ToolCategory::Communication
     };
-    for (ToolCategory c : cats) {
-        auto* btn = new CategoryRailButton(c);
-        connect(btn, &QPushButton::clicked, [this, c]() { onRailCategoryClicked(c); });
-        vl->addWidget(btn);
-        m_railBtns[c] = btn;
+    for (ToolCategory cat : cats) {
+        auto* group = new QFrame();
+        group->setObjectName("OperatorGroup");
+        auto* gl = new QVBoxLayout(group);
+        gl->setContentsMargins(8, 8, 8, 8);
+        gl->setSpacing(5);
+        auto* heading = new QLabel(categoryToChinese(cat));
+        heading->setStyleSheet(QString("font-size:12px;font-weight:800;color:%1;padding:2px 3px;")
+                                   .arg(categoryColorHex(cat)));
+        gl->addWidget(heading);
+        for (const auto& meta : VisionOperatorRegistry::allTools()) {
+            if (meta.category != cat) continue;
+            auto* btn = new QPushButton(QString("+  %1").arg(meta.displayName));
+            btn->setProperty("operatorSearchText", meta.displayName + " " + meta.typeKey);
+            btn->setCursor(Qt::PointingHandCursor);
+            btn->setMinimumHeight(32);
+            btn->setStyleSheet(QString(
+                "QPushButton{background:#202A35;border:1px solid #344252;border-left:3px solid %1;"
+                "border-radius:3px;text-align:left;padding:5px 9px;color:#C9D4E0;font-size:11px;}"
+                "QPushButton:hover{background:#293A46;border-color:#48B889;color:#FFFFFF;}")
+                .arg(categoryColorHex(cat)));
+            const QString key = meta.typeKey;
+            connect(btn, &QPushButton::clicked, this, [this, key]() { onAppendTool(key); });
+            gl->addWidget(btn);
+        }
+        layout->addWidget(group);
     }
-    vl->addStretch();
+    layout->addStretch();
+    scroll->setWidget(host);
+    outer->addWidget(scroll, 1);
+
+    connect(search, &QLineEdit::textChanged, host, [host](const QString& query) {
+        const auto buttons = host->findChildren<QPushButton*>();
+        for (auto* button : buttons) {
+            const QString key = button->property("operatorSearchText").toString();
+            if (!key.isEmpty()) button->setVisible(query.trimmed().isEmpty()
+                || key.contains(query.trimmed(), Qt::CaseInsensitive));
+        }
+        const auto groups = host->findChildren<QFrame*>("OperatorGroup");
+        for (auto* group : groups) {
+            bool any = false;
+            for (auto* button : group->findChildren<QPushButton*>()) any = any || button->isVisible();
+            group->setVisible(any);
+        }
+    });
     return rail;
 }
 
@@ -820,7 +866,7 @@ QWidget* MainWindow::buildFlowPanel() {
     hl->setSpacing(6);
 
     auto* lblFlow = new QLabel("流程1");
-    lblFlow->setStyleSheet("color: #FFFFFF; font-weight: bold; padding: 2px 8px; border-bottom: 2px solid #FF7A00;");
+    lblFlow->setStyleSheet("color: #DDE8F2; font-size:14px; font-weight:800; padding: 2px 8px; border-bottom: 2px solid #39B77F;");
     auto* b1 = new QPushButton("▶"); b1->setProperty("accent", "tool"); connect(b1, &QPushButton::clicked, this, &MainWindow::runSingleFrame);
     auto* b2 = new QPushButton("▶▶"); b2->setProperty("accent", "tool"); connect(b2, &QPushButton::clicked, this, &MainWindow::toggleContinuousRun);
 
@@ -937,7 +983,7 @@ QWidget* MainWindow::buildRightWorkspace() {
     m_rightBotTabs->addTab(m_logBox, "运行日志");
     bl->addWidget(m_rightBotTabs);
     vsplit->addWidget(botCard);
-    vsplit->setSizes({500, 310});
+    vsplit->setSizes({560, 300});
     return vsplit;
 }
 
@@ -1369,6 +1415,44 @@ void MainWindow::onNodeSelected(FlowCapsuleItem* node) {
     const QString& t = node->data.typeKey;
     int row = 0;
 
+    // Every operator can explicitly choose which connected upstream node supplies its image.
+    QVector<FlowNodeData> flowNodes;
+    QVector<FlowEdgeData> flowEdges;
+    m_flowCanvas->exportSpecs(flowNodes, flowEdges);
+    QVector<int> incomingIds;
+    for (const auto& edge : flowEdges) if (edge.dstId == node->data.id) incomingIds.push_back(edge.srcId);
+    if (!incomingIds.isEmpty()) {
+        auto* sourceBox = new QFrame();
+        sourceBox->setObjectName("TemplateLaunchCard");
+        auto* sourceLayout = new QGridLayout(sourceBox);
+        sourceLayout->setContentsMargins(10, 8, 10, 8);
+        auto* sourceTitle = new QLabel("图像输入来源");
+        sourceTitle->setStyleSheet("font-weight:800;color:#1D4ED8;");
+        auto* sourceCombo = new QComboBox();
+        sourceCombo->addItem("自动：使用默认上游", 0);
+        for (int parentId : incomingIds) {
+            QString parentTitle = QString("#%1").arg(parentId);
+            for (const auto& flowNode : flowNodes)
+                if (flowNode.id == parentId) parentTitle = QString("#%1  %2").arg(parentId).arg(flowNode.title);
+            sourceCombo->addItem(parentTitle, parentId);
+        }
+        int selected = node->data.params.value("image_input_node_id", 0).toInt();
+        int selectedIndex = sourceCombo->findData(selected);
+        sourceCombo->setCurrentIndex(selectedIndex >= 0 ? selectedIndex : 0);
+        connect(sourceCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                [this, node, sourceCombo](int) {
+            node->data.params["image_input_node_id"] = sourceCombo->currentData().toInt();
+            onFlowChanged();
+        });
+        auto* sourceHint = new QLabel("可从任意已连线的上游算子取图；灰度图也会随图像一起传递。");
+        sourceHint->setWordWrap(true);
+        sourceHint->setStyleSheet("color:#64748B;font-size:11px;");
+        sourceLayout->addWidget(sourceTitle, 0, 0);
+        sourceLayout->addWidget(sourceCombo, 1, 0);
+        sourceLayout->addWidget(sourceHint, 2, 0);
+        m_paramForm->addWidget(sourceBox, row++, 0, 1, 2);
+    }
+
     // 高精度模板采用独立学习工作台；主界面只显示模型状态和学习入口
     if (meta.supportsTemplateLearn) {
         auto* card = new QFrame();
@@ -1455,9 +1539,16 @@ void MainWindow::onNodeSelected(FlowCapsuleItem* node) {
 
     for (auto it = node->data.params.begin(); it != node->data.params.end(); ++it) {
         QString key = it.key();
-        if (key == "use_search_roi" || key.startsWith("sroi_")) continue;
+        if (key == "use_search_roi" || key.startsWith("sroi_") || key == "image_input_node_id") continue;
         QVariant val = it.value();
-        m_paramForm->addWidget(new QLabel(key + ":"), row, 0);
+        QString displayKey = key;
+        if (key == "image_input_node_id") displayKey = "图像输入节点ID (0=默认上游)";
+        else if (key == "min_score") displayKey = "最低匹配分数";
+        else if (key == "angle_start") displayKey = "搜索起始角度";
+        else if (key == "angle_end") displayKey = "搜索结束角度";
+        else if (key == "angle_step") displayKey = "粗搜索角度步长";
+        else if (key == "subpixel") displayKey = "亚像素精定位";
+        m_paramForm->addWidget(new QLabel(displayKey + ":"), row, 0);
 
         if (key == "feature_mode" && t == "high_prec_match") {
             auto* cb = new QComboBox();
@@ -1787,10 +1878,15 @@ void MainWindow::onCycleCompleted(const cv::Mat& rawBgr, const cv::Mat& visBgr, 
     if (m_camCtrl.actualWidth() > 0) {
         m_lblActualRes->setText(QString("实际输出分辨率：%1 × %2").arg(m_camCtrl.actualWidth()).arg(m_camCtrl.actualHeight()));
     }
-    m_imagePanel->canvas->updateFrames(rawBgr, m_rawOnly ? rawBgr : visBgr,
-                                       m_engine->isRunning(), false, summary.finalOk ? 1 : 0);
-
     qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    // Cap image-widget refresh to ~30 Hz while inspection may run much faster.
+    // This keeps the Qt GUI responsive and avoids repaint/copy work on every camera cycle.
+    if (!m_engine->isRunning() || (nowMs - m_lastFrameUiUpdateMs >= 33)) {
+        m_lastFrameUiUpdateMs = nowMs;
+        m_imagePanel->canvas->updateFrames(rawBgr, m_rawOnly ? rawBgr : visBgr,
+                                           m_engine->isRunning(), false, summary.finalOk ? 1 : 0);
+    }
+
     if (!m_engine->isRunning() || (nowMs - m_lastUiUpdateMs >= 140)) {
         m_lastUiUpdateMs = nowMs;
         m_flowCanvas->applyTelemetry(summary);
@@ -1846,10 +1942,10 @@ void MainWindow::toggleRunMode(bool checked) {
     if (checked) {
         m_rightTopTabs->setCurrentIndex(0);
         m_btnRunMode->setText("🛠 编辑模式");
-        m_mainSplitter->setSizes({0, 1080, 390});
+        m_mainSplitter->setSizes({0, 1500});
     } else {
         m_btnRunMode->setText("🖥 运行模式");
-        m_mainSplitter->setSizes({640, 810, 0});
+        m_mainSplitter->setSizes({610, 900});
     }
     QTimer::singleShot(50, m_imagePanel->canvas, &VmImageCanvasWidget::fitInView);
 }

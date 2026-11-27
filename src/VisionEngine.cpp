@@ -7,6 +7,8 @@
 #include <cmath>
 #include <deque>
 #include <algorithm>
+#include <map>
+#include <tuple>
 
 namespace {
 
@@ -56,6 +58,30 @@ cv::Mat rotateTemplateKeepSize(const cv::Mat& patch, double angleDeg, double bor
     cv::Mat rotated;
     cv::warpAffine(patch, rotated, rotM, patch.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(borderFill));
     return rotated;
+}
+
+// Rotation is a property of the learned template and angle, not of the live frame.
+// Cache it across continuous cycles so the expensive warpAffine is not repeated every frame.
+cv::Mat cachedRotatedTemplate(const cv::Mat& patch, const uchar* modelIdentity,
+                              int pyramidLevel, bool edgeFeature,
+                              double angleDeg, double borderFill) {
+    using CacheKey = std::tuple<const uchar*, int, bool, int>;
+    static std::mutex cacheMutex;
+    static std::map<CacheKey, cv::Mat> cache;
+    const int angleKey = static_cast<int>(std::lround(angleDeg * 100.0));
+    const CacheKey key{modelIdentity, pyramidLevel, edgeFeature, angleKey};
+    {
+        std::lock_guard<std::mutex> lock(cacheMutex);
+        auto it = cache.find(key);
+        if (it != cache.end()) return it->second;
+    }
+    cv::Mat rotated = (std::abs(angleDeg) < 1e-4) ? patch : rotateTemplateKeepSize(patch, angleDeg, borderFill);
+    {
+        std::lock_guard<std::mutex> lock(cacheMutex);
+        if (cache.size() > 768) cache.clear();
+        auto inserted = cache.emplace(key, rotated);
+        return inserted.first->second;
+    }
 }
 
 // 2D抛物线亚像素峰值精定位（达 0.01px 精度）
@@ -147,6 +173,8 @@ struct ExecContext {
     cv::Mat displayImage;
     StepResult lastResult;
     QMap<int, StepResult> results;
+    QMap<int, cv::Mat> nodeImages; // 每个算子独立输出图像，供连线下游选择
+    QMap<int, cv::Mat> nodeGrayImages; // 与图像同步保存的原生单通道灰度结果
     PlcClient* plcClient = nullptr;
     UnifiedCameraController* camCtrl = nullptr;
     bool allowPlcSend = true;
@@ -329,7 +357,7 @@ QVariantMap VisionOperatorRegistry::defaultParams(const QString& t) {
         p["angle_start"] = -180;
         p["angle_end"] = 180;
         p["angle_step"] = 10;
-        p["feature_mode"] = "灰度+边缘特征融合 (高精抗光)";
+        p["feature_mode"] = "纯灰度高精NCC";
         p["subpixel"] = true;
     } else if (t == "locate_template") {
         p["score_thresh"] = 0.75;
@@ -360,6 +388,7 @@ QVariantMap VisionOperatorRegistry::defaultParams(const QString& t) {
     } else if (t == "io_save_image") {
         p["save_dir"] = ""; p["prefix"] = "NG"; p["save_raw"] = false;
     }
+    p["image_input_node_id"] = 0; // 0=默认连接上游；>0=指定某个已连接上游节点ID
     p["use_search_roi"] = false;
     p["sroi_x"] = 50; p["sroi_y"] = 50; p["sroi_w"] = 400; p["sroi_h"] = 400;
     return p;
@@ -460,7 +489,14 @@ static StepResult runHighPrecisionTemplateMatch(const FlowNodeData& node, ExecCo
         return res;
     }
 
-    cv::Mat searchGray = toGray(sub);
+    // 优先直接读取上游灰度算子的单通道结果；没有灰度缓存时才从当前图像转换。
+    cv::Mat searchGray;
+    if (!ctx.grayImage.empty()) {
+        cv::Rect grayRect = hasSroi ? (sroiR & cv::Rect(0, 0, ctx.grayImage.cols, ctx.grayImage.rows))
+                                    : cv::Rect(0, 0, ctx.grayImage.cols, ctx.grayImage.rows);
+        if (grayRect.width > 0 && grayRect.height > 0) searchGray = ctx.grayImage(grayRect).clone();
+    }
+    if (searchGray.empty()) searchGray = toGray(sub);
     if (model.width > searchGray.cols || model.height > searchGray.rows) {
         res.summary = "模板超限";
         res.msg = "学习模板尺寸大于当前搜索区域";
@@ -506,13 +542,13 @@ static StepResult runHighPrecisionTemplateMatch(const FlowNodeData& node, ExecCo
 
     if (topTG.cols < topSG.cols && topTG.rows < topSG.rows) {
         for (int a = angStart; a <= angEnd; a += angStep) {
-            cv::Mat rotG = (a == 0) ? topTG : rotateTemplateKeepSize(topTG, a, meanTG);
+            cv::Mat rotG = cachedRotatedTemplate(topTG, model.grayPatch.data, topLevel, false, a, meanTG);
             cv::Mat resG;
             cv::matchTemplate(topSG, rotG, resG, cv::TM_CCOEFF_NORMED);
             double score = 0.0;
             cv::Point maxLoc;
             if (useEdgeFusion && !topSE.empty() && !topTE.empty()) {
-                cv::Mat rotE = (a == 0) ? topTE : rotateTemplateKeepSize(topTE, a, 0.0);
+                cv::Mat rotE = cachedRotatedTemplate(topTE, model.grayPatch.data, topLevel, true, a, 0.0);
                 cv::Mat resE;
                 cv::matchTemplate(topSE, rotE, resE, cv::TM_CCOEFF_NORMED);
                 cv::Mat fused;
@@ -558,15 +594,40 @@ static StepResult runHighPrecisionTemplateMatch(const FlowNodeData& node, ExecCo
     }
     if (fineAngles.empty()) fineAngles.push_back(0.0);
 
+    // 全分辨率阶段只在金字塔粗定位附近做局部精匹配，避免每帧对整张4K图重复N次matchTemplate。
+    // topLevel坐标映射回原图；局部搜索窗口覆盖模板周围的定位误差。
+    const int pyrScale = 1 << topLevel;
+    const AngleCand coarseBest = coarseCands.empty() ? AngleCand{0.0, 0.0, cv::Point(0,0)} : coarseCands.front();
+    int predictedX = coarseBest.loc.x * pyrScale;
+    int predictedY = coarseBest.loc.y * pyrScale;
+    int marginX = std::max(model.width, 48);
+    int marginY = std::max(model.height, 48);
+    int cropX = std::max(0, predictedX - marginX);
+    int cropY = std::max(0, predictedY - marginY);
+    int cropR = std::min(searchGray.cols, predictedX + model.width + marginX);
+    int cropB = std::min(searchGray.rows, predictedY + model.height + marginY);
+    cv::Rect localRect(cropX, cropY, cropR - cropX, cropB - cropY);
+    if (localRect.width < model.width || localRect.height < model.height)
+        localRect = cv::Rect(0, 0, searchGray.cols, searchGray.rows);
+    cv::Mat localGray = searchGray(localRect);
+    cv::Mat localEdge = (useEdgeFusion && !fullSE.empty()) ? fullSE(localRect) : cv::Mat();
+
+    // 在粗定位角度附近精修；角度范围越大，粗定位仍负责全角度搜索，精定位不再扫整幅图。
+    if (fineAngles.size() > 7) {
+        std::sort(fineAngles.begin(), fineAngles.end(), [&](double a, double b) {
+            return std::abs(a - coarseBest.angle) < std::abs(b - coarseBest.angle);
+        });
+        fineAngles.resize(7);
+    }
     for (double a : fineAngles) {
-        cv::Mat rotG = (std::abs(a) < 1e-4) ? fullTG : rotateTemplateKeepSize(fullTG, a, fullMeanG);
+        cv::Mat rotG = cachedRotatedTemplate(fullTG, model.grayPatch.data, 0, false, a, fullMeanG);
         cv::Mat resG;
-        cv::matchTemplate(searchGray, rotG, resG, cv::TM_CCOEFF_NORMED);
+        cv::matchTemplate(localGray, rotG, resG, cv::TM_CCOEFF_NORMED);
         cv::Mat targetMap = resG;
-        if (useEdgeFusion && !fullSE.empty() && !fullTE.empty()) {
-            cv::Mat rotE = (std::abs(a) < 1e-4) ? fullTE : rotateTemplateKeepSize(fullTE, a, 0.0);
+        if (useEdgeFusion && !localEdge.empty() && !fullTE.empty()) {
+            cv::Mat rotE = cachedRotatedTemplate(fullTE, model.grayPatch.data, 0, true, a, 0.0);
             cv::Mat resE;
-            cv::matchTemplate(fullSE, rotE, resE, cv::TM_CCOEFF_NORMED);
+            cv::matchTemplate(localEdge, rotE, resE, cv::TM_CCOEFF_NORMED);
             cv::addWeighted(resG, 0.65, resE, 0.35, 0.0, targetMap);
         }
         double sc = 0.0;
@@ -575,8 +636,10 @@ static StepResult runHighPrecisionTemplateMatch(const FlowNodeData& node, ExecCo
         if (sc > bestScore) {
             bestScore = sc;
             bestAngle = a;
-            bestIntLoc = loc;
+            bestIntLoc = cv::Point(loc.x + cropX, loc.y + cropY);
             bestScoreMap = targetMap;
+            // 亚像素峰值使用局部得分图中的坐标，单独保存偏移基准
+            bestIntLoc.x -= cropX; bestIntLoc.y -= cropY;
         }
     }
 
@@ -585,8 +648,8 @@ static StepResult runHighPrecisionTemplateMatch(const FlowNodeData& node, ExecCo
         refineSubpixelPeak(bestScoreMap, bestIntLoc, subDx, subDy);
     }
 
-    double centerX = ox + bestIntLoc.x + subDx + model.width / 2.0;
-    double centerY = oy + bestIntLoc.y + subDy + model.height / 2.0;
+    double centerX = ox + cropX + bestIntLoc.x + subDx + model.width / 2.0;
+    double centerY = oy + cropY + bestIntLoc.y + subDy + model.height / 2.0;
     double scorePct = bestScore * 100.0;
 
     if (bestScore < minScore) {
@@ -1411,8 +1474,17 @@ FlowCycleSummary FlowExecutionRunner::execute(
                 summary.nodeStates[n.id] = st;
                 continue;
             }
-            int lastPid = activeParents.last();
-            if (ctx.results.contains(lastPid)) ctx.lastResult = ctx.results[lastPid];
+            int selectedInput = n.params.value("image_input_node_id", 0).toInt();
+            int imageParent = activeParents.last();
+            if (selectedInput > 0 && activeParents.contains(selectedInput)) imageParent = selectedInput;
+            if (ctx.nodeImages.contains(imageParent) && !ctx.nodeImages[imageParent].empty()) {
+                ctx.image = ctx.nodeImages[imageParent].clone();
+                if (ctx.nodeGrayImages.contains(imageParent) && !ctx.nodeGrayImages[imageParent].empty())
+                    ctx.grayImage = ctx.nodeGrayImages[imageParent].clone();
+                else
+                    ctx.grayImage = (ctx.image.channels() == 1) ? ctx.image.clone() : cv::Mat();
+            }
+            if (ctx.results.contains(imageParent)) ctx.lastResult = ctx.results[imageParent];
         }
 
         QElapsedTimer opTimer;
@@ -1433,6 +1505,11 @@ FlowCycleSummary FlowExecutionRunner::execute(
         }
         summary.nodeStates[n.id] = st;
         summary.executionOrder.push_back(n.id);
+        // 保存算子实际处理后的图像（不是叠加标注的预览图），下游可按连线独立取图
+        if (!ctx.image.empty()) ctx.nodeImages[n.id] = ctx.image.clone();
+        else if (!ctx.sourceImage.empty()) ctx.nodeImages[n.id] = ctx.sourceImage.clone();
+        if (!ctx.grayImage.empty()) ctx.nodeGrayImages[n.id] = ctx.grayImage.clone();
+        else ctx.nodeGrayImages.remove(n.id);
 
         ctx.lastResult = sr;
         ctx.results[n.id] = sr;

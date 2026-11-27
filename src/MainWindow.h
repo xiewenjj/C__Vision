@@ -199,6 +199,7 @@ private:
     int m_statOk = 0;
     int m_statNg = 0;
     qint64 m_lastUiUpdateMs = 0;
+    qint64 m_lastFrameUiUpdateMs = 0;
 
     QTimer* m_pollTimer = nullptr;
     QTimer* m_plcStatTimer = nullptr;
