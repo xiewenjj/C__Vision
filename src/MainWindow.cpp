@@ -11,6 +11,10 @@
 #include <QScrollArea>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QGroupBox>
 #include <QMenu>
 #include <QShortcut>
 #include <QKeySequence>
@@ -26,6 +30,7 @@
 #include <QPixmap>
 #include <cmath>
 #include <algorithm>
+#include <utility>
 
 // ==================== VmLogoWidget ====================
 VmLogoWidget::VmLogoWidget(QWidget* parent) : QWidget(parent) {
@@ -504,7 +509,7 @@ void FreeAddressPlcEditor::updatePreview() {
 
 // ==================== MainWindow ====================
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    setWindowTitle("VisionMaster C++ v4.7 — 仿海康威视工业视觉与高精度模板学习工作站");
+    setWindowTitle("Vision Studio — 工业视觉流程与高精度模板匹配");
     resize(1520, 910);
     setStyleSheet(buildGlassStyleSheet(false));
 
@@ -549,134 +554,59 @@ void MainWindow::closeEvent(QCloseEvent* e) {
 }
 
 QString MainWindow::buildGlassStyleSheet(bool cyberBlue) const {
-    QString accent = cyberBlue ? "#00D8FF" : "#FF7A00";
-    QString accentL = cyberBlue ? "#5CE7FF" : "#FF9E3D";
-    QString bgWin = cyberBlue ? "#0B0F17" : "#17191E";
-    QString bgTop = cyberBlue ? "#101624" : "#1E2128";
+    const QString accent = cyberBlue ? "#0EA5E9" : "#2563EB";
+    const QString accentHover = cyberBlue ? "#0284C7" : "#1D4ED8";
+    const QString base = cyberBlue ? "#EAF3FA" : "#F3F6FB";
     return QString(R"(
 QMainWindow, QWidget {
     background-color: %1;
-    color: #E5E7EB;
+    color: #172B4D;
     font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-    font-size: 12px;
+    font-size: 13px;
 }
-QFrame#TopTitleBar {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #262A33, stop:1 %2);
-    border-bottom: 1px solid rgba(255,255,255,28);
+QFrame#TopTitleBar { background:#FFFFFF; border-bottom:1px solid #DCE4EF; }
+QFrame#ActionRibbon { background:#F8FAFC; border-bottom:1px solid #DCE4EF; }
+QFrame#CategoryRail { background:#FFFFFF; border-right:1px solid #DCE4EF; }
+QFrame#GlassPanel, QFrame#GlassSubCard, QFrame#FlowSubHeader {
+    background:#FFFFFF; border:1px solid #DCE4EF; border-radius:10px;
 }
-QFrame#ActionRibbon {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(42,46,56,238), stop:1 rgba(28,31,38,242));
-    border-bottom: 1px solid rgba(255,255,255,28);
-}
-QFrame#CategoryRail {
-    background-color: #1B1E24;
-    border-right: 1px solid rgba(255,255,255,26);
-}
-QFrame#GlassPanel {
-    background-color: rgba(34, 38, 46, 215);
-    border: 1px solid rgba(255, 255, 255, 28);
-    border-top: 1px solid rgba(255, 255, 255, 42);
-    border-radius: 8px;
-}
-QFrame#GlassSubCard {
-    background-color: rgba(44, 49, 60, 198);
-    border: 1px solid rgba(255, 255, 255, 28);
-    border-top: 1px solid rgba(255, 255, 255, 42);
-    border-radius: 7px;
-}
-QFrame#FlowSubHeader {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(48,52,62,225), stop:1 rgba(34,38,46,225));
-    border-bottom: 1px solid rgba(255,255,255,26);
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-}
-QFrame#BottomStatusBar {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #20242C, stop:1 #16181E);
-    border-top: 1px solid rgba(255,255,255,26);
-}
-QLabel#SectionTitle { color: %4; font-size: 12px; font-weight: bold; }
-QLabel#Breadcrumb { color: #9CA3AF; font-size: 11px; padding: 2px 8px; }
+QFrame#BottomStatusBar { background:#FFFFFF; border-top:1px solid #DCE4EF; }
+QLabel#SectionTitle { color:#1E40AF; font-size:13px; font-weight:800; }
+QLabel#Breadcrumb { color:#64748B; font-size:12px; padding:2px 8px; }
 QPushButton {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(62,68,82,215), stop:1 rgba(42,47,58,220));
-    color: #E5E7EB;
-    border: 1px solid rgba(255,255,255,28);
-    border-radius: 5px;
-    padding: 4px 10px;
-    font-weight: bold;
-    min-height: 20px;
+    background:#FFFFFF; color:#334155; border:1px solid #CBD5E1;
+    border-radius:7px; padding:6px 12px; font-weight:600; min-height:22px;
 }
-QPushButton:hover { border-color: %3; color: #FFFFFF; }
-QPushButton[accent="primary"] {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 %4, stop:1 %3);
-    border: 1px solid %4;
-    color: #101216;
-}
-QPushButton[accent="success"] {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #34D399, stop:1 #16A34A);
-    border: 1px solid #4ADE80;
-    color: #071A0E;
-}
-QPushButton[accent="danger"] {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F87171, stop:1 #DC2626);
-    border: 1px solid #FCA5A5;
-    color: #FFFFFF;
-}
-QPushButton[accent="tool"] {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 5px;
-    padding: 4px 7px;
-    color: #D1D5DB;
-}
-QPushButton[accent="tool"]:hover { background: rgba(255,255,255,22); border-color: rgba(255,255,255,30); color: #FFFFFF; }
-QPushButton[accent="tool"]:checked { background: rgba(255,122,0,55); border: 1px solid %3; color: %4; }
-QPushButton[accent="menu"] { background: transparent; border: none; color: #CBD5E1; padding: 4px 10px; font-weight: normal; }
-QPushButton[accent="menu"]:hover { background: rgba(255,255,255,18); color: #FFFFFF; border-radius: 4px; }
+QPushButton:hover { background:#EFF6FF; border-color:%3; color:%4; }
+QPushButton:pressed { background:#DBEAFE; }
+QPushButton[accent="primary"] { background:%3; color:white; border:1px solid %3; }
+QPushButton[accent="success"] { background:#059669; color:white; border:1px solid #059669; }
+QPushButton[accent="danger"] { background:#DC2626; color:white; border:1px solid #DC2626; }
+QPushButton[accent="tool"] { background:transparent; border:1px solid transparent; color:#475569; }
+QPushButton[accent="tool"]:hover { background:#EFF6FF; border-color:#BFDBFE; color:%4; }
+QPushButton[accent="tool"]:checked { background:#DBEAFE; border:1px solid #93C5FD; color:#1D4ED8; }
+QPushButton[accent="menu"] { background:transparent; border:0; color:#475569; padding:6px 12px; }
 QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-    background-color: rgba(18, 20, 26, 232);
-    color: #E5E7EB;
-    border: 1px solid rgba(255,255,255,28);
-    border-radius: 5px;
-    padding: 3px 7px;
-    min-height: 20px;
+    background:#FFFFFF; color:#172B4D; border:1px solid #CBD5E1;
+    border-radius:6px; padding:5px 8px; min-height:22px;
 }
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus { border-color: %3; }
-QComboBox QAbstractItemView { background-color: #242832; color: #E5E7EB; border: 1px solid %3; selection-background-color: %3; selection-color: #111318; }
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus { border:1px solid %3; }
+QComboBox QAbstractItemView { background:#FFFFFF; color:#172B4D; border:1px solid #CBD5E1; selection-background-color:#DBEAFE; }
 QTableWidget, QListWidget, QTextEdit {
-    background-color: rgba(22, 25, 31, 228);
-    color: #E5E7EB;
-    border: 1px solid rgba(255,255,255,26);
-    border-radius: 6px;
-    alternate-background-color: rgba(32, 36, 45, 220);
-    gridline-color: rgba(255,255,255,14);
+    background:#FFFFFF; color:#172B4D; border:1px solid #DCE4EF;
+    border-radius:7px; alternate-background-color:#F8FAFC; gridline-color:#E2E8F0;
 }
-QHeaderView::section {
-    background-color: rgba(42, 46, 56, 238);
-    color: #9CA3AF;
-    border: none;
-    border-right: 1px solid rgba(255,255,255,16);
-    border-bottom: 1px solid rgba(255,255,255,22);
-    padding: 5px 6px;
-    font-weight: bold;
-}
-QTabWidget::pane { border: none; background: transparent; }
-QTabBar::tab {
-    background: rgba(34, 38, 46, 175);
-    color: #9CA3AF;
-    border: none;
-    border-bottom: 2px solid transparent;
-    padding: 7px 16px;
-    margin-right: 2px;
-    font-weight: bold;
-}
-QTabBar::tab:selected { background: rgba(50, 55, 68, 228); color: #FFFFFF; border-bottom: 2px solid %3; }
-QTabBar::tab:hover { color: #FFFFFF; }
-QMenu { background-color: rgba(30, 34, 42, 246); border: 1px solid %3; border-radius: 6px; color: #E5E7EB; padding: 4px; }
-QMenu::item { padding: 6px 18px; border-radius: 4px; }
-QMenu::item:selected { background-color: %3; color: #111318; }
-QSplitter::handle { background-color: #14161B; }
-QSplitter::handle:hover { background-color: %3; }
-)").arg(bgWin, bgTop, accent, accentL);
+QHeaderView::section { background:#F1F5F9; color:#475569; border:0; border-bottom:1px solid #DCE4EF; padding:7px; font-weight:700; }
+QTabWidget::pane { border:1px solid #DCE4EF; background:#FFFFFF; border-radius:8px; }
+QTabBar::tab { background:#F1F5F9; color:#64748B; border:0; padding:8px 16px; margin-right:3px; }
+QTabBar::tab:selected { background:#FFFFFF; color:%4; border-bottom:2px solid %3; font-weight:800; }
+QMenu { background:#FFFFFF; border:1px solid #DCE4EF; color:#172B4D; padding:5px; }
+QMenu::item { padding:7px 18px; border-radius:4px; }
+QMenu::item:selected { background:#DBEAFE; color:#1D4ED8; }
+QSplitter::handle { background:#E2E8F0; }
+QSplitter::handle:hover { background:%3; }
+QFrame#TemplateLaunchCard { background:#F8FAFC; border:1px solid #CBD5E1; border-radius:10px; }
+)").arg(base, "#FFFFFF", accent, accentHover);
 }
 
 void MainWindow::buildUi() {
@@ -1439,53 +1369,44 @@ void MainWindow::onNodeSelected(FlowCapsuleItem* node) {
     const QString& t = node->data.typeKey;
     int row = 0;
 
-    // ==================== 学习模板方式 UI 卡片 ====================
+    // 高精度模板采用独立学习工作台；主界面只显示模型状态和学习入口
     if (meta.supportsTemplateLearn) {
         auto* card = new QFrame();
-        card->setObjectName("GlassSubCard");
-        auto* cl = new QHBoxLayout(card);
-        cl->setContentsMargins(10, 8, 10, 8);
-        cl->setSpacing(10);
+        card->setObjectName("TemplateLaunchCard");
+        auto* vl = new QVBoxLayout(card);
+        vl->setContentsMargins(14, 12, 14, 12);
+        vl->setSpacing(9);
 
-        auto* lblThumb = new QLabel();
-        lblThumb->setFixedSize(88, 88);
-        lblThumb->setAlignment(Qt::AlignCenter);
-        lblThumb->setStyleSheet("background: #14171D; border: 1px solid rgba(255,122,0,140); border-radius: 6px; color: #9CA3AF; font-size: 11px;");
+        auto* title = new QLabel("模板模型");
+        title->setStyleSheet("font-size:16px;font-weight:700;color:#172B4D;");
+        vl->addWidget(title);
+
+        auto* status = new QLabel();
+        status->setWordWrap(true);
         if (node->data.learnedModel.isLearned && !node->data.learnedModel.grayPatch.empty()) {
-            const cv::Mat& gp = node->data.learnedModel.grayPatch;
-            QImage qi(gp.data, gp.cols, gp.rows, static_cast<int>(gp.step), QImage::Format_Grayscale8);
-            lblThumb->setPixmap(QPixmap::fromImage(qi.copy()).scaled(84, 84, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            status->setText(QString("● 模型已就绪  |  %1 × %2 px  |  学习时间 %3")
+                .arg(node->data.learnedModel.width).arg(node->data.learnedModel.height)
+                .arg(node->data.learnedModel.learnedTime));
+            status->setStyleSheet("color:#087F5B;font-weight:600;");
         } else {
-            lblThumb->setText("尚未学习\n模板模型");
+            status->setText("○ 尚未建立模板模型。请进入学习工作台，框选目标并完成学习。");
+            status->setStyleSheet("color:#B45309;font-weight:600;");
         }
-        cl->addWidget(lblThumb);
+        vl->addWidget(status);
 
-        auto* rightBox = new QVBoxLayout();
-        rightBox->setSpacing(5);
-        QString statusTxt = node->data.learnedModel.isLearned
-            ? QString("✔ 已学习灰度特征模型: %1 × %2 px  (学习于 %3)")
-                  .arg(node->data.learnedModel.width).arg(node->data.learnedModel.height).arg(node->data.learnedModel.learnedTime)
-            : QString("⚠ 未学习模板：请先在上方图像框选目标，再点下方学习按钮");
-        auto* lblInfo = new QLabel(statusTxt);
-        lblInfo->setStyleSheet(node->data.learnedModel.isLearned ? "color: #4ADE80; font-weight: bold;" : "color: #FBBF24; font-weight: bold;");
-        rightBox->addWidget(lblInfo);
+        auto* hint = new QLabel("学习只在此窗口执行一次；主流程运行时复用已生成的模板特征。");
+        hint->setWordWrap(true);
+        hint->setStyleSheet("color:#64748B;");
+        vl->addWidget(hint);
 
-        auto* btnRow = new QHBoxLayout();
-        auto* btnDrawLearnRoi = new QPushButton("⬚ 1. 框选学习区域 (ROI)");
-        connect(btnDrawLearnRoi, &QPushButton::clicked, [this]() {
-            m_imagePanel->btnRoi->setChecked(true);
-            appendLog("请在上方图像上拖拽框选要学习的目标模型区域", "INFO");
-        });
-        auto* btnDoLearn = new QPushButton("🎓 2. 学习当前区域为模板");
-        btnDoLearn->setProperty("accent", "success");
-        connect(btnDoLearn, &QPushButton::clicked, [this, node]() {
+        auto* launch = new QPushButton(node->data.learnedModel.isLearned
+            ? "打开模板学习工作台 / 重新学习" : "打开模板学习工作台");
+        launch->setMinimumHeight(40);
+        launch->setProperty("accent", "primary");
+        connect(launch, &QPushButton::clicked, [this, node]() {
             learnTemplateFromCurrentRoi(node);
         });
-        btnRow->addWidget(btnDrawLearnRoi);
-        btnRow->addWidget(btnDoLearn);
-        rightBox->addLayout(btnRow);
-        cl->addLayout(rightBox, 1);
-
+        vl->addWidget(launch);
         m_paramForm->addWidget(card, row++, 0, 1, 2);
     }
 
@@ -1601,7 +1522,7 @@ void MainWindow::onRoiDrawn(int x, int y, int w, int h) {
     ToolMeta meta = VisionOperatorRegistry::findTool(m_activeNode->data.typeKey);
     if (meta.supportsTemplateLearn) {
         // 对于学习模板节点，画ROI后提示可直接点击“学习当前区域为模板”
-        appendLog(QString("已框选学习区域 (%1,%2, %3×%4)，请点击「🎓 2. 学习当前区域为模板」完成建模").arg(x).arg(y).arg(w).arg(h), "INFO");
+        appendLog(QString("已框选区域 (%1,%2, %3×%4)。高精度模板请在独立学习工作台中完成建模").arg(x).arg(y).arg(w).arg(h), "INFO");
         return;
     }
     if (!meta.supportsRoi) return;
@@ -1615,27 +1536,160 @@ void MainWindow::onRoiDrawn(int x, int y, int w, int h) {
 }
 
 void MainWindow::learnTemplateFromCurrentRoi(FlowCapsuleItem* node) {
-    cv::Mat src = !m_lastRawImg.empty() ? m_lastRawImg : m_staticImg;
-    if (src.empty()) {
-        QMessageBox::information(this, "提示", "当前无图像，请先点击「▶ 单次运行」或「▶▶ 连续运行」采集一帧图像。");
-        return;
+    if (!node) return;
+
+    cv::Mat source = !m_lastRawImg.empty() ? m_lastRawImg.clone()
+                    : (!m_staticImg.empty() ? m_staticImg.clone() : cv::Mat());
+    if (source.empty()) source = m_camCtrl.grabFrame();
+    if (source.empty()) {
+        QMessageBox::information(this, "模板学习", "当前没有可用图像。请先采集一帧，或在学习窗口导入图片。");
     }
-    if (!m_imagePanel->canvas->hasRoiRect()) {
-        QMessageBox::information(this, "提示", "请先点击「⬚ 1. 框选学习区域 (ROI)」并在上方图像中拖拽框选要学习的模板物体。");
-        return;
-    }
-    QRect qr = m_imagePanel->canvas->currentRoiRect();
-    cv::Rect cvRoi(qr.x(), qr.y(), qr.width(), qr.height());
-    if (VisionOperatorRegistry::learnTemplateFromRoi(src, cvRoi, node->data.learnedModel)) {
-        // 学习完成后清除学习框，使全图可自由搜索该学习模型
-        m_imagePanel->canvas->setRoiRect(0, 0, 0, 0, false);
+
+    QDialog dlg(this);
+    dlg.setWindowTitle("高精度模板学习工作台");
+    dlg.resize(1180, 760);
+    dlg.setMinimumSize(900, 620);
+    dlg.setModal(true);
+    dlg.setStyleSheet(R"(
+        QDialog { background:#F3F6FB; color:#172B4D; }
+        QLabel { color:#334155; }
+        QFrame#LearnHeader { background:#FFFFFF; border:1px solid #DCE4EF; border-radius:12px; }
+        QFrame#LearnPanel { background:#FFFFFF; border:1px solid #DCE4EF; border-radius:12px; }
+        QPushButton { background:#FFFFFF; color:#334155; border:1px solid #CBD5E1; border-radius:7px; padding:9px 14px; font-weight:600; }
+        QPushButton:hover { border-color:#2563EB; color:#1D4ED8; }
+        QPushButton[primary="true"] { background:#2563EB; color:white; border:1px solid #2563EB; }
+        QPushButton[primary="true"]:hover { background:#1D4ED8; }
+        QDoubleSpinBox,QSpinBox,QComboBox { background:#F8FAFC; color:#172B4D; border:1px solid #CBD5E1; border-radius:6px; padding:6px; min-height:24px; }
+    )");
+
+    auto* root = new QVBoxLayout(&dlg);
+    root->setContentsMargins(18, 16, 18, 16);
+    root->setSpacing(12);
+
+    auto* header = new QFrame();
+    header->setObjectName("LearnHeader");
+    auto* hh = new QHBoxLayout(header);
+    hh->setContentsMargins(18, 12, 18, 12);
+    auto* heading = new QVBoxLayout();
+    auto* h1 = new QLabel("高精度模板学习");
+    h1->setStyleSheet("font-size:22px;font-weight:800;color:#0F172A;");
+    auto* h2 = new QLabel("导入或采集基准图像 → 框选目标 → 建立灰度 / 边缘 / 多尺度特征模型");
+    h2->setStyleSheet("color:#64748B;font-size:12px;");
+    heading->addWidget(h1); heading->addWidget(h2);
+    hh->addLayout(heading, 1);
+    auto* state = new QLabel("LEARNING WORKSPACE");
+    state->setStyleSheet("color:#2563EB;font-weight:700;letter-spacing:1px;");
+    hh->addWidget(state);
+    root->addWidget(header);
+
+    auto* body = new QHBoxLayout();
+    body->setSpacing(12);
+    auto* imagePanel = new QFrame(); imagePanel->setObjectName("LearnPanel");
+    auto* imageLayout = new QVBoxLayout(imagePanel);
+    imageLayout->setContentsMargins(10,10,10,10);
+    auto* canvas = new VmImageCanvasWidget();
+    canvas->setMinimumSize(560, 430);
+    canvas->updateFrames(source, source, false, false, -1);
+    imageLayout->addWidget(canvas, 1);
+    auto* imageTools = new QHBoxLayout();
+    auto* importBtn = new QPushButton("导入图片");
+    auto* captureBtn = new QPushButton("重新采集");
+    auto* roiBtn = new QPushButton("框选目标区域");
+    roiBtn->setProperty("primary", true);
+    imageTools->addWidget(importBtn); imageTools->addWidget(captureBtn);
+    imageTools->addStretch(); imageTools->addWidget(roiBtn);
+    imageLayout->addLayout(imageTools);
+    body->addWidget(imagePanel, 1);
+
+    auto* side = new QFrame(); side->setObjectName("LearnPanel");
+    side->setMinimumWidth(260); side->setMaximumWidth(310);
+    auto* sideLayout = new QVBoxLayout(side);
+    sideLayout->setContentsMargins(16,16,16,16);
+    auto* stepTitle = new QLabel("学习设置");
+    stepTitle->setStyleSheet("font-size:17px;font-weight:800;color:#0F172A;");
+    sideLayout->addWidget(stepTitle);
+    auto* desc = new QLabel("只需在基准图像中框选一次目标。学习完成后，主界面连续运行将直接复用该模型。");
+    desc->setWordWrap(true); desc->setStyleSheet("color:#64748B;line-height:1.4;");
+    sideLayout->addWidget(desc);
+
+    auto* roiInfo = new QLabel("尚未框选目标");
+    roiInfo->setWordWrap(true);
+    roiInfo->setStyleSheet("background:#EFF6FF;color:#1D4ED8;border-radius:7px;padding:10px;font-weight:600;");
+    sideLayout->addWidget(roiInfo);
+    auto* form = new QFormLayout();
+    form->setSpacing(10);
+    auto* minScore = new QDoubleSpinBox(); minScore->setRange(0.10,0.999); minScore->setSingleStep(0.01);
+    minScore->setValue(node->data.params.value("min_score",0.75).toDouble());
+    minScore->setSuffix("  (0-1)");
+    auto* angleStart = new QSpinBox(); angleStart->setRange(-180,180); angleStart->setValue(node->data.params.value("angle_start",-180).toInt());
+    auto* angleEnd = new QSpinBox(); angleEnd->setRange(-180,180); angleEnd->setValue(node->data.params.value("angle_end",180).toInt());
+    auto* angleStep = new QSpinBox(); angleStep->setRange(1,30); angleStep->setValue(node->data.params.value("angle_step",10).toInt());
+    form->addRow("最低匹配分数",minScore);
+    form->addRow("角度起点(°)",angleStart);
+    form->addRow("角度终点(°)",angleEnd);
+    form->addRow("粗搜索步长(°)",angleStep);
+    sideLayout->addLayout(form);
+    sideLayout->addStretch();
+
+    auto* learnBtn = new QPushButton("建立模板模型");
+    learnBtn->setProperty("primary", true); learnBtn->setMinimumHeight(46);
+    auto* cancelBtn = new QPushButton("关闭");
+    sideLayout->addWidget(learnBtn); sideLayout->addWidget(cancelBtn);
+    body->addWidget(side, 0);
+    root->addLayout(body,1);
+
+    QRect selectedRoi;
+    auto setSource = [&](const cv::Mat& img) {
+        if (img.empty()) return;
+        source = img.clone();
+        canvas->updateFrames(source, source, false, false, -1);
+        canvas->setRoiRect(0,0,0,0,false);
+        selectedRoi = QRect();
+        roiInfo->setText(QString("图像尺寸：%1 × %2\n尚未框选目标").arg(source.cols).arg(source.rows));
+    };
+    connect(importBtn, &QPushButton::clicked, &dlg, [&]() {
+        QString path = QFileDialog::getOpenFileName(&dlg,"导入模板基准图像",QString(),
+            "图像文件 (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)");
+        if (!path.isEmpty()) setSource(cv::imread(path.toStdString(),cv::IMREAD_COLOR));
+    });
+    connect(captureBtn, &QPushButton::clicked, &dlg, [&]() { setSource(m_camCtrl.grabFrame()); });
+    connect(roiBtn, &QPushButton::clicked, &dlg, [&]() {
+        canvas->setRoiMode(true);
+        roiInfo->setText("请在左侧图像中拖动鼠标，框住需要识别的目标。");
+    });
+    connect(canvas, &VmImageCanvasWidget::roiSelected, &dlg,
+        [&](int x,int y,int w,int h) {
+            selectedRoi = QRect(x,y,w,h);
+            roiInfo->setText(QString("已选择目标区域\n位置：(%1, %2)\n尺寸：%3 × %4 px").arg(x).arg(y).arg(w).arg(h));
+        });
+    connect(learnBtn, &QPushButton::clicked, &dlg, [&]() {
+        if (source.empty() || selectedRoi.width() < 12 || selectedRoi.height() < 12) {
+            QMessageBox::warning(&dlg,"无法学习","请先导入 / 采集图像，并框选至少 12×12 像素的目标区域。");
+            return;
+        }
+        LearnedTemplateModel model;
+        if (!VisionOperatorRegistry::learnTemplateFromRoi(source,
+                cv::Rect(selectedRoi.x(),selectedRoi.y(),selectedRoi.width(),selectedRoi.height()), model)) {
+            QMessageBox::warning(&dlg,"学习失败","无法建立模板模型，请重新框选纹理和边缘特征明显的目标。");
+            return;
+        }
+        node->data.learnedModel = std::move(model);
+        node->data.params["min_score"] = minScore->value();
+        node->data.params["angle_start"] = angleStart->value();
+        node->data.params["angle_end"] = angleEnd->value();
+        node->data.params["angle_step"] = angleStep->value();
         node->data.params["use_search_roi"] = false;
+        appendLog(QString("模板学习完成：%1×%2 px；模型金字塔与边缘特征已生成并缓存。")
+            .arg(node->data.learnedModel.width).arg(node->data.learnedModel.height),"OK");
+        dlg.accept();
+    });
+    connect(cancelBtn,&QPushButton::clicked,&dlg,&QDialog::reject);
+
+    if (!source.empty())
+        roiInfo->setText(QString("当前图像：%1 × %2\n请框选目标区域").arg(source.cols).arg(source.rows));
+    if (dlg.exec() == QDialog::Accepted) {
         onNodeSelected(node);
         onFlowChanged();
-        appendLog(QString("高精度模板学习成功！模型尺寸: %1×%2 px (已构建金字塔与边缘特征)").arg(qr.width()).arg(qr.height()), "OK");
-        if (!m_engine->isRunning()) runSingleFrame();
-    } else {
-        QMessageBox::warning(this, "学习失败", "所选学习区域过小（需至少 12×12 像素），请重新框选。");
     }
 }
 

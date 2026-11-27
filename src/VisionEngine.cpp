@@ -328,7 +328,7 @@ QVariantMap VisionOperatorRegistry::defaultParams(const QString& t) {
         p["min_score"] = 0.75;
         p["angle_start"] = -180;
         p["angle_end"] = 180;
-        p["angle_step"] = 5;
+        p["angle_step"] = 10;
         p["feature_mode"] = "灰度+边缘特征融合 (高精抗光)";
         p["subpixel"] = true;
     } else if (t == "locate_template") {
@@ -530,7 +530,7 @@ static StepResult runHighPrecisionTemplateMatch(const FlowNodeData& node, ExecCo
     std::sort(coarseCands.begin(), coarseCands.end(), [](const AngleCand& a, const AngleCand& b) {
         return a.score > b.score;
     });
-    if (coarseCands.size() > 3) coarseCands.resize(3);
+    if (coarseCands.size() > 1) coarseCands.resize(1);
 
     // 阶段2：全分辨率 (Level 0) 局部精细角度搜索 + 2D抛物线亚像素精定位
     double bestScore = -1.0;

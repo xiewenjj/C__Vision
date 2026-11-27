@@ -3,8 +3,8 @@
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
-    app.setApplicationName("VisionMaster_CPP");
-    app.setApplicationVersion("4.7.0");
+    app.setApplicationName("VisionStudio");
+    app.setApplicationVersion("5.0.0");
 
     MainWindow win;
     win.show();
