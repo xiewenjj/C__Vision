@@ -1,0 +1,62 @@
+name: Build C++ Windows EXE
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-cpp-windows-exe:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC x64 Build Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Qt 6.8.3 (MSVC 2022 x64)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          setup-python: 'false'
+          cache: true
+
+      - name: Download & Extract Prebuilt OpenCV 4.10.0
+        shell: pwsh
+        run: |
+          $url = "https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe"
+          Invoke-WebRequest -Uri $url -OutFile opencv.exe
+          7z x opencv.exe -oC:\ -y | Out-Null
+          echo "OpenCV_DIR=C:\opencv\build\x64\vc16\lib" >> $env:GITHUB_ENV
+
+      - name: Configure CMake (Ninja Release)
+        shell: pwsh
+        run: |
+          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" -DOpenCV_DIR="C:\opencv\build\x64\vc16\lib"
+
+      - name: Build VisionMaster_CPP.exe
+        shell: pwsh
+        run: |
+          cmake --build build --parallel
+
+      - name: Package Portable Release Folder (Qt + OpenCV DLLs)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release_pkg | Out-Null
+          Copy-Item "build\VisionMaster_CPP.exe" -Destination "release_pkg\"
+          Copy-Item "C:\opencv\build\x64\vc16\bin\opencv_world4100.dll" -Destination "release_pkg\"
+          if (Test-Path "test_images") {
+            Copy-Item "test_images" -Destination "release_pkg\test_images" -Recurse
+          }
+          & "$env:QT_ROOT_DIR\bin\windeployqt.exe" --release --no-translations --no-opengl-sw "release_pkg\VisionMaster_CPP.exe"
+
+      - name: Upload VisionMaster_CPP Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VisionMaster_CPP-Windows-x64
+          path: release_pkg/
