@@ -272,7 +272,7 @@ const QVector<ToolMeta>& VisionOperatorRegistry::allTools() {
         {"img_binary",          "二值化分割",            ToolCategory::Preprocess,    false, false},
         {"img_morph",           "形态学处理",            ToolCategory::Preprocess,    false, false},
         {"img_transform",       "图像旋转镜像",          ToolCategory::Preprocess,    false, false},
-        // 3. 定位工具 (6 - 新增高精度模板匹配)
+        // 3. 定位工具 (6)
         {"high_prec_match",     "高精度模板匹配",        ToolCategory::Location,      true,  true},
         {"locate_template",     "快速灰度匹配",          ToolCategory::Location,      true,  true},
         {"locate_shape",        "轮廓形状匹配",          ToolCategory::Location,      true,  true},
@@ -476,7 +476,7 @@ static StepResult runHighPrecisionTemplateMatch(const FlowNodeData& node, ExecCo
     bool doSubpixel = node.params.value("subpixel", true).toBool();
 
     // 构建搜索图像金字塔
-    int topLevel = std::max(0, model.pyrGray.size() - 1);
+    int topLevel = std::max(0, static_cast<int>(model.pyrGray.size()) - 1);
     QVector<cv::Mat> searchPyrG, searchPyrE;
     cv::Mat curSG = searchGray;
     cv::Mat curSE = useEdgeFusion ? computeEdgeGradient(searchGray) : cv::Mat();
@@ -738,10 +738,10 @@ static StepResult executeSingleOperator(const FlowNodeData& node, ExecContext& c
         }
         if (std::abs(alpha - 1.0) > 1e-3 || beta != 0) out.convertTo(out, -1, alpha, beta);
         if (p.value("auto_clahe", false).toBool()) {
-            cv::Mat lab; cv::cvtColor(out, lab, cv::COLOR_BGR2LAB);
-            std::vector<cv::Mat> ch; cv::split(lab, ch);
-            cv::createCLAHE(2.2, cv::Size(8, 8))->apply(ch[0], ch[0]);
-            cv::merge(ch, lab); cv::cvtColor(lab, out, cv::COLOR_LAB2BGR);
+            cv::Mat hsv; cv::cvtColor(out, hsv, cv::COLOR_BGR2HSV);
+            std::vector<cv::Mat> ch; cv::split(hsv, ch);
+            cv::createCLAHE(2.2, cv::Size(8, 8))->apply(ch[2], ch[2]);
+            cv::merge(ch, hsv); cv::cvtColor(hsv, out, cv::COLOR_HSV2BGR);
         }
         ctx.image = out.clone();
         ctx.rawImage = out.clone();
